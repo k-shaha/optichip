@@ -32,16 +32,23 @@ Modern AI applications are increasingly bottlenecked not by raw computation, but
 • Docker (planned) — Containerization for consistent runtime environments  
 • Grafana (optional) — Real-time dashboard for analyzing simulation results at scale  
 
+**Interface and Visualization**  
+• Streamlit — Interactive frontend for configuring simulations and viewing results in real-time 
+
 ## Project Structure
+```
 optichip/
 ├── backend/
-│ ├── simulator.py # Core simulation logic
-│ ├── log_utils.py # Handles structured CSV logging
-│ └── main.py # FastAPI app entrypoint
-├── flatten_logs.py # Merges and processes simulation logs
-├── runs_log.csv # Raw simulation history
-├── processed_runs.csv # Cleaned version of log data
+│   ├── simulator.py         # Core simulation logic
+│   ├── log_utils.py         # Handles structured CSV logging
+│   └── main.py              # FastAPI app entrypoint
+├── flatten_logs.py          # Merges and processes simulation logs
+├── runs_log.csv             # Raw simulation history
+├── processed_runs.csv       # Cleaned version of log data
+├── frontend/
+│   └── app.py               # Streamlit UI for simulation input
 └── README.md
+```
 
 ## Example Use Case
 
