@@ -1,0 +1,9 @@
+setup.py
+backend/__init__.py
+backend/simulator.py
+frontend/__init__.py
+frontend/app.py
+optichip.egg-info/PKG-INFO
+optichip.egg-info/SOURCES.txt
+optichip.egg-info/dependency_links.txt
+optichip.egg-info/top_level.txt
