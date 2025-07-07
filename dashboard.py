@@ -8,7 +8,7 @@ st.set_page_config(page_title="OptiChip GPU Simulator", layout="wide")
 API_BASE = "http://localhost:8000"
 
 # --------------------
-# Green GPU Theme (#40ab34)
+# Green GPU Theme
 # --------------------
 st.markdown("""
     <style>
@@ -78,7 +78,7 @@ if st.button("Run Simulation"):
     try:
         payload = {
             "memory_blocks": memory_blocks,
-            "delay": delay,
+            "enable_delay": delay,
             "memory_type": memory_type
         }
         response = requests.post(f"{API_BASE}/simulate", json=payload)
@@ -86,6 +86,16 @@ if st.button("Run Simulation"):
         st.success(f"Simulation complete at {response.json()['timestamp']}")
     except Exception as e:
         st.error(f"Simulation failed: {e}")
+
+# --------------------
+# Reset Button
+# --------------------
+if st.button("Restart (Clear History)"):
+    try:
+        requests.post(f"{API_BASE}/reset")
+        st.success("Simulation log cleared.")
+    except Exception as e:
+        st.error(f"Failed to reset log: {e}")
 
 # --------------------
 # Pull + Show Full History
@@ -102,51 +112,49 @@ try:
         for entry in all_runs:
             results = entry["results"]
             if isinstance(results, str):
-                results = json.loads(results.replace("'", "\""))
+                try:
+                    results = json.loads(results.replace("'", "\""))
+                except Exception:
+                    results = []
+
             for block in results:
-                records.append({
-                    "Timestamp": entry.get("timestamp"),
-                    "Memory Type": entry.get("memory_type", "n/a"),
-                    "Delay": entry.get("delay", False),
-                    "Block ID": block["block_id"],
-                    "Transfer Time (s)": block["transfer_time"]
-                })
+                if isinstance(block, dict):
+                    records.append({
+                        "Timestamp": entry.get("timestamp"),
+                        "Memory Type": entry.get("memory_type", "n/a"),
+                        "Delay": entry.get("delay", False),
+                        "Block ID": block.get("block_id"),
+                        "Transfer Time (s)": block.get("transfer_time")
+                    })
 
         df = pd.DataFrame(records)
 
-        # Bar chart
-        fig = px.bar(
-            df,
-            x="Block ID",
-            y="Transfer Time (s)",
-            color_discrete_sequence=["#40ab34"],
-            title="Transfer Time by Block",
-            labels={"Block ID": "Block ID", "Transfer Time (s)": "Transfer Time (s)"}
-        )
-        fig.update_layout(
-            plot_bgcolor="#0f0f0f",
-            paper_bgcolor="#0f0f0f",
-            font_color="#40ab34"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        if not df.empty:
+            # Bar chart
+            fig = px.bar(
+                df,
+                x="Block ID",
+                y="Transfer Time (s)",
+                color_discrete_sequence=["#40ab34"],
+                title="Transfer Time by Block",
+                labels={"Block ID": "Block ID", "Transfer Time (s)": "Transfer Time (s)"}
+            )
+            fig.update_layout(
+                plot_bgcolor="#0f0f0f",
+                paper_bgcolor="#0f0f0f",
+                font_color="#40ab34"
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
-        # --------------------
-        # Restart Button (below chart)
-        # --------------------
-        if st.button("Restart (Clear History)"):
-            try:
-                requests.post(f"{API_BASE}/reset")
-                st.success("Simulation log cleared.")
-            except Exception as e:
-                st.error(f"Failed to reset log: {e}")
-
-        # Raw table
-        st.markdown("### Raw Transfer Data")
-        st.dataframe(df.style.set_properties(**{
-            'background-color': '#0f0f0f',
-            'color': '#40ab34',
-            'text-align': 'center'
-        }), use_container_width=True)
+            # Table
+            st.markdown("### Raw Transfer Data")
+            st.dataframe(df.style.set_properties(**{
+                'background-color': '#0f0f0f',
+                'color': '#40ab34',
+                'text-align': 'center'
+            }), use_container_width=True)
+        else:
+            st.info("No valid simulation entries found.")
     else:
         st.info("No history found yet.")
 except Exception as e:

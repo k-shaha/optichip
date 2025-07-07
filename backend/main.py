@@ -1,63 +1,39 @@
 from fastapi import FastAPI
-from backend.simulator import simulate_workload 
-from backend.logger import log_simulation, CSV_LOG
-from backend.models import SimulationRequest, SimulationResponse
+from pydantic import BaseModel
+from simulator import simulate_workload
+from workload_logger import log_workload, read_log
 from datetime import datetime
-import json
-import os
 
 app = FastAPI()
 
-# ------------------------
-# Run a simulation
-# ------------------------
-@app.post("/simulate", response_model=SimulationResponse)
-def run_simulation(sim_req: SimulationRequest): 
+class SimulationRequest(BaseModel):
+    memory_blocks: int
+    memory_type: str
+    enable_delay: bool
+
+@app.post("/simulate")
+def simulate(request: SimulationRequest):
+    print("🔥 /simulate called")
+
     results = simulate_workload(
-        sim_req.memory_blocks, 
-        sim_req.delay, 
-        sim_req.memory_type
+        memory_blocks=request.memory_blocks,
+        memory_type=request.memory_type,
+        enable_delay=request.enable_delay
     )
 
-    timestamp = log_simulation(sim_req, results)
+    # ✅ Sanity check
+    assert isinstance(results, list) and isinstance(results[0], dict)
 
-    return {
-        "timestamp": timestamp,
-        "config": sim_req, 
-        "results": results 
+    payload = {
+        "timestamp": datetime.now().isoformat(),
+        "memory_type": request.memory_type,
+        "delay": request.enable_delay,
+        "results": results
     }
 
-# ------------------------
-# Get entire simulation log
-# ------------------------
+    log_workload(payload)
+    return payload
+
 @app.get("/log")
 def get_log():
-    data = []
-    try:
-        with open("backend/runs_log_cleaned.csv", "r") as f:
-            lines = f.readlines()
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue  # skip blank lines
-                try:
-                    data.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue  # skip malformed
-        return data
-    except FileNotFoundError:
-        return []
-    except Exception as e:
-        return {"error": str(e)}
-
-# ------------------------
-# Clear the log file
-# ------------------------
-@app.post("/reset")
-def reset_log():
-    try:
-        with open("backend/runs_log_cleaned.csv", "w") as f:
-            f.write("")  # clear file
-        return {"status": "log reset"}
-    except Exception as e:
-        return {"error": str(e)}
+    return read_log()

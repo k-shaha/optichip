@@ -1,52 +1,54 @@
-import streamlit as st 
-import requests 
-import pandas as pd
-import time 
+import streamlit as st
+import requests
 
-st.title("OptiChip - GPU Workload Visualizer")
+st.set_page_config(page_title="OptiChip Simulator", layout="centered")
 
-# ----- UI Controls -----
-memory_blocks = st.slider("Number of Memory Blocks", min_value=1, max_value=20, value=6, key="memory_blocks_slider")
-delay = st.checkbox("Enable Real-Time Delay", value=True, key="delay_checkbox")
-memory_type = st.radio("Select Memory Type", options=["global", "shared"], index=0, key="memory_type_radio")
-run_button = st.button("Run Simulation", key="run_button")
+st.markdown(
+    "<h1 style='color:#2ECC71; font-size: 36px;'>OptiChip: GPU Workload Visualizer</h1>", 
+    unsafe_allow_html=True
+)
 
+with st.form("sim-form"):
+    st.subheader("Simulation Parameters")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        memory_blocks = st.slider("Memory Blocks", 1, 64, 8)
+    with col2:
+        delay = st.slider("Delay (ms)", 0, 500, 100)
+    
+    memory_type = st.selectbox("Memory Type", ["DRAM", "SRAM", "HBM"])
+    
+    submitted = st.form_submit_button("Run Simulation")
 
-# ----- Backend URL -----
-API_URL = "http://127.0.0.1:8000/simulate"
+if submitted:
+    payload = {
+        "memory_blocks": memory_blocks,
+        "delay": delay,
+        "memory_type": memory_type
+    }
+    try:
+        res = requests.post("http://127.0.0.1:8000/simulate", json=payload)
+        if res.status_code == 200:
+            data = res.json()
+            st.success(f"Simulation completed at {data['timestamp']}")
+            st.code("\n".join(data["results"]), language="text")
+        else:
+            st.error("Simulation failed. Please check your backend.")
+    except Exception as e:
+        st.error(f"Error: {e}")
 
-#-----Trigger Simulation-----
-if run_button: 
-    with st.spinner("Simulating GPU transfer..."): 
-        payload = {
-            "memory_blocks": memory_blocks, 
-            "delay": delay,
-            "memory_type": memory_type
-        }
+st.markdown("---")
 
-        try: 
-            response = requests.post(API_URL, json=payload)
-            response.raise_for_status()  # Raise an error for bad responses
-            data = response.json()
-
-            results = data["results"]
-            from pandas import DataFrame as TrueDataFrame
-            df = TrueDataFrame(results)
-            
-            st.text(f"✅ df is of type: {type(df)}")
-            st.write("DataFrame preview:")
-            st.write(df)
-            if "transfer_time" in df.columns:
-                st.bar_chart(df["transfer_time"])
-                st.success(f"Simulation complete at {data['timestamp']}")
-            else:
-                st.error("⚠️ 'transfer_time' column missing from simulation result.")
-            
-
-            
-
-            
-            
-
-        except requests.exceptions.RequestException as e:
-            st.error(f"API Error: {e}")   
+if st.button("View Previous Logs"):
+    try:
+        res = requests.get("http://127.0.0.1:8000/log")
+        if res.status_code == 200 and res.json().get("log"):
+            log = res.json()["log"]
+            st.subheader("Simulation History")
+            for row in log[1:]:  # skip header
+                st.text(f"{row[0]} | {row[1]} | {row[2]} blocks | {row[3]} ms")
+        else:
+            st.info("No logs found.")
+    except Exception as e:
+        st.error(f"Error retrieving logs: {e}")

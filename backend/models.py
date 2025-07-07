@@ -1,19 +1,12 @@
-from pydantic import BaseModel 
-from typing import List, Literal 
-from datetime import datetime
+from pydantic import BaseModel
+from typing import Literal
 
 class SimulationRequest(BaseModel):
-   memory_blocks : int 
-   delay: bool
-   memory_type: Literal["global", "shared"]
-
-class BlockResult(BaseModel):
-    block_id: int
-    transfer_time: float
+    memory_blocks: int
+    memory_type: Literal["global", "shared", "texture"]
+    delay: bool
 
 class SimulationResponse(BaseModel):
-    timestamp: datetime
+    timestamp: str
     config: SimulationRequest
-    results: List [BlockResult]
-
-
+    results: dict
