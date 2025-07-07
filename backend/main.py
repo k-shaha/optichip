@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from simulator import simulate_workload
-from workload_logger import log_workload, read_log
+from backend.simulator import simulate_workload
+#from workload_logger import log_workload, read_log
+from backend.workload_logger import log_workload, read_log
+
 from datetime import datetime
 
 app = FastAPI()
